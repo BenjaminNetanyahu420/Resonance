@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "serve -s dist -l $PORT",
     "test": "vitest run",
     "test:watch": "vitest",
     "qa:export": "node scripts/export-smoke.mjs",
@@ -13,17 +14,18 @@
   },
   "dependencies": {
     "@mediabunny/aac-encoder": "^1.51.0",
-    "mediabunny": "^1.51.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
-  },
-  "devDependencies": {
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.2",
-    "playwright-core": "^1.62.1",
+    "mediabunny": "^1.51.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "serve": "^14.2.4",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",
     "vitest": "^3.2.4"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
   }
 }
