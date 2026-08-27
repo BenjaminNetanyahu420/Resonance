@@ -48,6 +48,7 @@ export default function App() {
   const projectInputRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const exportControllerRef = useRef<AbortController | null>(null);
+  const spotlightFrameRef = useRef<number | null>(null);
   const { project, updateProject, undo, redo, canUndo, canRedo } = useProjectHistory(loadProject());
   const [analysis, setAnalysis] = useState<AudioAnalysis | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export default function App() {
     playbackRef.current?.dispose();
     void audioContextRef.current?.close();
     exportControllerRef.current?.abort();
+    if (spotlightFrameRef.current !== null) window.cancelAnimationFrame(spotlightFrameRef.current);
   }, []);
 
   useEffect(() => {
@@ -191,6 +193,17 @@ export default function App() {
 
   return (
     <main className={`app-shell ${dragging ? 'is-dragging' : ''}`}
+      onPointerMove={(event) => {
+        if (spotlightFrameRef.current !== null) return;
+        const shell = event.currentTarget;
+        const { clientX, clientY } = event;
+        spotlightFrameRef.current = window.requestAnimationFrame(() => {
+          const bounds = shell.getBoundingClientRect();
+          shell.style.setProperty('--pointer-x', `${clientX - bounds.left}px`);
+          shell.style.setProperty('--pointer-y', `${clientY - bounds.top}px`);
+          spotlightFrameRef.current = null;
+        });
+      }}
       onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
       onDragOver={(event) => event.preventDefault()}
       onDragLeave={(event) => { if (event.currentTarget === event.target) setDragging(false); }}
@@ -198,7 +211,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-mark" aria-hidden="true"><i /><i /><i /></div>
         <div className="brand-copy"><strong>RESONANCE</strong><span>VISUAL SYNTHESIS STUDIO</span></div>
-        <div className="project-title"><span>PROJECT</span><strong>{project.name}</strong></div>
+        <div className="project-title"><span>WORKSPACE / PROJECT</span><strong>{project.name}</strong></div>
         <div className="top-actions">
           <span className={`status-dot ${webglAvailable ? '' : 'unavailable'}`}><i /> {webglAvailable ? 'WebGL2 ready' : 'WebGL2 unavailable'}</span>
           <button className="button ghost" onClick={() => audioInputRef.current?.click()} disabled={disabled}>Import audio</button>
@@ -227,7 +240,7 @@ export default function App() {
 
         <section className="panel-section">
           <div className="section-heading"><span>Visual presets</span><b>03</b></div>
-          <div className="preset-list">{Object.entries(PRESETS).map(([id, preset]) => <button key={id} className={project.scene.name === preset.scene.name ? 'active' : ''} onClick={() => updateProject(migrateProject(preset), 'load-preset')}>
+          <div className="preset-list">{Object.entries(PRESETS).map(([id, preset]) => <button key={id} className={project.scene.name === preset.scene.name ? 'active' : ''} aria-pressed={project.scene.name === preset.scene.name} onClick={() => updateProject(migrateProject(preset), 'load-preset')}>
             <i style={{ background: `linear-gradient(135deg, ${preset.scene.primaryColor}, ${preset.scene.secondaryColor})` }} /><span><strong>{preset.scene.name}</strong><small>{preset.layers.length} layers · {preset.scene.symmetry}-fold</small></span>
           </button>)}</div>
         </section>
@@ -245,10 +258,10 @@ export default function App() {
       </aside>
 
       <section className="workspace">
-        <div className="canvas-toolbar"><span>COMPOSITION / OUTPUT</span><div className="preview-actions">
-          <button className={project.scene.audioEnabled ? 'active' : ''} onClick={() => updateProject((current) => ({ ...current, scene: { ...current.scene, audioEnabled: !current.scene.audioEnabled } }), 'bypass-audio')}>Audio mod</button>
-          <button className={project.scene.effectsEnabled ? 'active' : ''} onClick={() => updateProject((current) => ({ ...current, scene: { ...current.scene, effectsEnabled: !current.scene.effectsEnabled } }), 'bypass-effects')}>Effects</button>
-          <button onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : stageRef.current?.requestFullscreen())}>{fullscreen ? 'Exit' : 'Fullscreen'}</button>
+        <div className="canvas-toolbar"><span>COMPOSITION <b>{project.export.width} × {project.export.height}</b></span><div className="preview-actions">
+          <button className={project.scene.audioEnabled ? 'active' : ''} aria-pressed={project.scene.audioEnabled} onClick={() => updateProject((current) => ({ ...current, scene: { ...current.scene, audioEnabled: !current.scene.audioEnabled } }), 'bypass-audio')}>Audio mod</button>
+          <button className={project.scene.effectsEnabled ? 'active' : ''} aria-pressed={project.scene.effectsEnabled} onClick={() => updateProject((current) => ({ ...current, scene: { ...current.scene, effectsEnabled: !current.scene.effectsEnabled } }), 'bypass-effects')}>Effects</button>
+          <button aria-label={fullscreen ? 'Exit fullscreen preview' : 'Enter fullscreen preview'} onClick={() => void (document.fullscreenElement ? document.exitFullscreen() : stageRef.current?.requestFullscreen())}>{fullscreen ? 'Exit' : 'Fullscreen'}</button>
           <span><i className="live-dot" /> PREVIEW</span>
         </div></div>
         <div className="stage-wrap"><div className="stage-frame" ref={stageRef}>
@@ -257,7 +270,7 @@ export default function App() {
         </div></div>
         <div className="transport">
           <button className="transport-button" onClick={() => seek(0)} disabled={!analysis} aria-label="Go to beginning">|◀</button>
-          <button className="play-button" onClick={() => void togglePlayback()} disabled={!analysis}>{playing ? 'Ⅱ' : '▶'}</button>
+          <button className="play-button" onClick={() => void togglePlayback()} disabled={!analysis} aria-label={playing ? 'Pause audio' : 'Play audio'}>{playing ? 'Ⅱ' : '▶'}</button>
           <div className="time-readout"><strong>{formatTime(time)}</strong><span>/ {formatTime(analysis?.duration ?? 0)}</span></div>
           <div className="transport-spacer" /><span>{project.export.fps} FPS</span>
         </div>
