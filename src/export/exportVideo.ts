@@ -11,7 +11,7 @@ import {
 } from 'mediabunny';
 import type { AudioAnalysis } from '../audio/types';
 import { sampleAudioFeatures } from '../audio/timeline';
-import type { ExportSettings, SceneSettings } from '../project/types';
+import type { ExportSettings, ProjectState } from '../project/types';
 import { SceneRenderer } from '../render/SceneRenderer';
 
 export interface ExportProgress {
@@ -34,12 +34,13 @@ export interface ExportResult {
 export async function exportComposition(options: {
   audioBuffer: AudioBuffer;
   analysis: AudioAnalysis;
-  scene: SceneSettings;
+  project: ProjectState;
   settings: ExportSettings;
   signal?: AbortSignal;
   onProgress?: (progress: ExportProgress) => void;
 }): Promise<ExportResult> {
-  const { audioBuffer, analysis, scene, settings, signal, onProgress } = options;
+  const { audioBuffer, analysis, project, settings, signal, onProgress } = options;
+  const scene = project.scene;
   onProgress?.({ frame: 0, totalFrames: 0, progress: 0, stage: 'checking' });
   if (settings.width % 2 !== 0 || settings.height % 2 !== 0) throw new Error('H.264 export dimensions must be even.');
   const quality = new Quality({ bitrate: settings.bitrate, bitrateMode: 'variable' });
@@ -85,7 +86,7 @@ export async function exportComposition(options: {
       if (signal?.aborted) throw new DOMException('Export canceled', 'AbortError');
       const time = frame / settings.fps;
       const duration = Math.min(1 / settings.fps, Math.max(1e-6, analysis.duration - time));
-      renderer.render(time, sampleAudioFeatures(analysis, time), scene);
+      renderer.render(time, sampleAudioFeatures(analysis, time), project, analysis.duration);
       await videoSource.add(time, duration, { keyFrame: frame % Math.max(1, Math.round(settings.fps * 2)) === 0 });
       encodedFrames += 1;
       if (frame % 4 === 0 || frame === totalFrames - 1) {

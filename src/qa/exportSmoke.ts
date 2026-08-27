@@ -1,6 +1,6 @@
 import { analyzePcm, audioBufferToPcm } from '../audio/analyze';
 import { exportComposition } from '../export/exportVideo';
-import { DEFAULT_SCENE } from '../project/defaults';
+import { DEFAULT_PROJECT } from '../project/defaults';
 
 async function run(): Promise<void> {
   const resultElement = document.querySelector<HTMLPreElement>('#result')!;
@@ -37,7 +37,7 @@ async function run(): Promise<void> {
     const result = await exportComposition({
       audioBuffer: buffer,
       analysis,
-      scene: DEFAULT_SCENE,
+      project: DEFAULT_PROJECT,
       settings: { width, height, fps, bitrate: Number(parameters.get('bitrate') ?? 800_000) },
     });
     const signature = Array.from(new Uint8Array(await result.blob.slice(4, 8).arrayBuffer()))

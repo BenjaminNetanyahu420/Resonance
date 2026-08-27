@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import type { AudioAnalysis } from '../audio/types';
 import { sampleAudioFeatures } from '../audio/timeline';
-import type { SceneSettings } from '../project/types';
+import type { ProjectState } from '../project/types';
 import { SceneRenderer } from '../render/SceneRenderer';
 
 interface Props {
   analysis: AudioAnalysis | null;
-  scene: SceneSettings;
+  project: ProjectState;
   getTime: () => number;
   onFrame: (time: number) => void;
   pausedTime: number;
@@ -19,10 +19,10 @@ const SILENT_FEATURES = {
   spectrum: new Float32Array(64).fill(0.12),
 };
 
-export function VisualizerCanvas({ analysis, scene, getTime, onFrame, pausedTime }: Props) {
+export function VisualizerCanvas({ analysis, project, getTime, onFrame, pausedTime }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef({ analysis, scene, getTime, onFrame, pausedTime });
-  stateRef.current = { analysis, scene, getTime, onFrame, pausedTime };
+  const stateRef = useRef({ analysis, project, getTime, onFrame, pausedTime });
+  stateRef.current = { analysis, project, getTime, onFrame, pausedTime };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,7 +38,8 @@ export function VisualizerCanvas({ analysis, scene, getTime, onFrame, pausedTime
     let lastUiUpdate = 0;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      const quality = stateRef.current.project.performance.previewResolution;
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5) * quality;
       renderer.resize(rect.width * ratio, rect.height * ratio);
     };
     const observer = new ResizeObserver(resize);
@@ -48,7 +49,7 @@ export function VisualizerCanvas({ analysis, scene, getTime, onFrame, pausedTime
       const state = stateRef.current;
       const time = state.getTime();
       const features = state.analysis ? sampleAudioFeatures(state.analysis, time) : { ...SILENT_FEATURES, time };
-      renderer.render(time, features, state.scene);
+      renderer.render(time, features, state.project, state.analysis?.duration ?? 1);
       if (now - lastUiUpdate > 33) {
         state.onFrame(time);
         lastUiUpdate = now;
@@ -65,4 +66,3 @@ export function VisualizerCanvas({ analysis, scene, getTime, onFrame, pausedTime
 
   return <canvas ref={canvasRef} className="visualizer-canvas" aria-label="Procedural visual preview" />;
 }
-
